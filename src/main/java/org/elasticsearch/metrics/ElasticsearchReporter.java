@@ -288,7 +288,7 @@ public class ElasticsearchReporter extends ScheduledReporter {
         }
 
         try {
-            HttpURLConnection connection = openConnection("/_bulk", "POST");
+            HttpURLConnection connection = openConnection("/" + currentIndexName + "/_bulk", "PUT");
             if (connection == null) {
                 LOGGER.error("Could not connect to any configured elasticsearch instances: {}", Arrays.asList(hosts));
                 return;
@@ -350,7 +350,7 @@ public class ElasticsearchReporter extends ScheduledReporter {
      * Execute a percolation request for the specified metric
      */
     private List<String> getPercolationMatches(JsonMetric jsonMetric) throws IOException {
-        HttpURLConnection connection = openConnection("/" + currentIndexName + "/" + jsonMetric.type() + "/_percolate", "POST");
+        HttpURLConnection connection = openConnection("/" + currentIndexName /*+ *//*"/" + jsonMetric.type() + "/_percolate"*/, "PUT");
         if (connection == null) {
             LOGGER.error("Could not connect to any configured elasticsearch instances for percolation: {}", Arrays.asList(hosts));
             return Collections.emptyList();
@@ -412,7 +412,7 @@ public class ElasticsearchReporter extends ScheduledReporter {
     private HttpURLConnection createNewConnectionIfBulkSizeReached(HttpURLConnection connection, int entriesWritten) throws IOException {
         if (entriesWritten % bulkSize == 0) {
             closeConnection(connection);
-            return openConnection("/_bulk", "POST");
+            return openConnection("/" + currentIndexName + "/_bulk", "PUT");
         }
 
         return connection;
@@ -422,7 +422,7 @@ public class ElasticsearchReporter extends ScheduledReporter {
      * serialize a JSON metric over the outputstream in a bulk request
      */
     private void writeJsonMetric(JsonMetric jsonMetric, ObjectWriter writer, OutputStream out) throws IOException {
-        writer.writeValue(out, new BulkIndexOperationHeader(currentIndexName, jsonMetric.type()));
+        writer.writeValue(out, new BulkIndexOperationHeader(currentIndexName,null));
         out.write("\n".getBytes());
         writer.writeValue(out, jsonMetric);
         out.write("\n".getBytes());
@@ -438,6 +438,8 @@ public class ElasticsearchReporter extends ScheduledReporter {
             try {
                 URL templateUrl = new URL("http://" + host  + uri);
                 HttpURLConnection connection = ( HttpURLConnection ) templateUrl.openConnection();
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("Accept", "application/json");
                 connection.setRequestMethod(method);
                 connection.setConnectTimeout(timeout);
                 connection.setUseCaches(false);

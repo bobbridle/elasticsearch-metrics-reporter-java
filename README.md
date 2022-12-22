@@ -1,203 +1,175 @@
-# Metrics Elasticsearch Reporter
-
-![Project unmaintained](https://img.shields.io/badge/project-unmaintained-red.svg)
-
-**This project is no longer maintained. If you want to maintain it, please fork and we will link to your new repository.**
+# Metrics Elasticsearch Reporter (Patched)
 
 ## Introduction
 
-This is a reporter for the excellent [Metrics library](http://metrics.dropwizard.io/), similar to the [Graphite](http://metrics.dropwizard.io/3.1.0/manual/graphite/) or [Ganglia](http://metrics.dropwizard.io/3.1.0/manual/ganglia/) reporters, except that it reports to an Elasticsearch server.
+This is a forked version of the [Metrics Elasticsearch Reporter](https://github.com/elastic/elasticsearch-metrics-reporter-java) to make it compatible with Elasticsearch 7.10+. 
 
-In case, you are worried, that you need to include the 20MB elasticsearch dependency in your project, you do not need to be. As this reporter is using HTTP for putting data into elasticsearch, the only library needed is the awesome [Jackson JSON library](http://wiki.fasterxml.com/JacksonHome), more exactly the Jackson Databind library to easily serialize the metrics objects.
-
-If you want to see this in action, go to the `samples/` directory and read the readme over there, to get up and running with a sample application using the Metrics library as well as a dashboard application to graph.
+The [Metrics Elasticsearch Reporter](https://github.com/elastic/elasticsearch-metrics-reporter-java) is a reporter for the excellent [Metrics library](http://metrics.dropwizard.io/), similar to the [Graphite](http://metrics.dropwizard.io/3.1.0/manual/graphite/) or [Ganglia](http://metrics.dropwizard.io/3.1.0/manual/ganglia/) reporters, except that it reports to an Elasticsearch server.
 
 ## Compatibility
 
-|   Metrics-elasticsearch-reporter  |    elasticsearch    | Release date |
-|-----------------------------------|---------------------|:------------:|
-| 2.3.0-SNAPSHOT                    | 2.3.0  -> master    |  NONE        |
-| 2.2.0                             | 2.2.0  -> 2.2.x     |  2016-02-10  |
-| 2.0                               | 1.0.0  -> 1.7.x     |  2014-02-16  |
-| 1.0                               | 0.90.7 -> 0.90.x    |  2014-02-05  |
+| metrics-elasticsearch-reporter-patched | elasticsearch | Release date |
+|----------------------------------------|---------------|:------------:|
+| 2.3.0                                  | 7.10+         |  22-12-2022  |
 
-## Travis CI build status
+## Patched changes (Git Patch)
 
-[![Build status](https://api.travis-ci.org/elastic/elasticsearch-metrics-reporter-java.svg?branch=master)](https://travis-ci.org/elastic/elasticsearch-metrics-reporter-java)
+Subject: [PATCH] ElasticSearch 7.10+ compatibility
+---
+===================================================================
+diff --git a/src/main/java/org/elasticsearch/metrics/ElasticsearchReporter.java b/src/main/java/org/elasticsearch/metrics/ElasticsearchReporter.java
+--- a/src/main/java/org/elasticsearch/metrics/ElasticsearchReporter.java	(revision 4018eaef6fc7721312f7440b2bf5a19699a6cb56)
++++ b/src/main/java/org/elasticsearch/metrics/ElasticsearchReporter.java	(date 1671593544459)
+@@ -288,7 +288,7 @@
+}
 
-## Installation
+         try {
+-            HttpURLConnection connection = openConnection("/_bulk", "POST");
++            HttpURLConnection connection = openConnection("/" + currentIndexName + "/_bulk", "PUT");
+             if (connection == null) {
+                 LOGGER.error("Could not connect to any configured elasticsearch instances: {}", Arrays.asList(hosts));
+                 return;
+@@ -350,7 +350,7 @@
+* Execute a percolation request for the specified metric
+*/
+private List<String> getPercolationMatches(JsonMetric jsonMetric) throws IOException {
+-        HttpURLConnection connection = openConnection("/" + currentIndexName + "/" + jsonMetric.type() + "/_percolate", "POST");
++        HttpURLConnection connection = openConnection("/" + currentIndexName /*+ *//*"/" + jsonMetric.type() + "/_percolate"*/, "PUT");
+         if (connection == null) {
+             LOGGER.error("Could not connect to any configured elasticsearch instances for percolation: {}", Arrays.asList(hosts));
+             return Collections.emptyList();
+@@ -412,7 +412,7 @@
+private HttpURLConnection createNewConnectionIfBulkSizeReached(HttpURLConnection connection, int entriesWritten) throws IOException {
+if (entriesWritten % bulkSize == 0) {
+closeConnection(connection);
+-            return openConnection("/_bulk", "POST");
++            return openConnection("/" + currentIndexName + "/_bulk", "PUT");
+         }
 
-You can simply add a dependency in your `pom.xml` (or whatever dependency resolution system you might have)
+         return connection;
+@@ -422,7 +422,7 @@
+* serialize a JSON metric over the outputstream in a bulk request
+*/
+private void writeJsonMetric(JsonMetric jsonMetric, ObjectWriter writer, OutputStream out) throws IOException {
+-        writer.writeValue(out, new BulkIndexOperationHeader(currentIndexName, jsonMetric.type()));
++        writer.writeValue(out, new BulkIndexOperationHeader(currentIndexName,null));
+         out.write("\n".getBytes());
+         writer.writeValue(out, jsonMetric);
+         out.write("\n".getBytes());
+@@ -438,6 +438,8 @@
+try {
+URL templateUrl = new URL("http://" + host  + uri);
+HttpURLConnection connection = ( HttpURLConnection ) templateUrl.openConnection();
++                connection.setRequestProperty("Content-Type", "application/json");
++                connection.setRequestProperty("Accept", "application/json");
+                 connection.setRequestMethod(method);
+                 connection.setConnectTimeout(timeout);
+                 connection.setUseCaches(false);
+Index: pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pom.xml b/pom.xml
+--- a/pom.xml	(revision 4018eaef6fc7721312f7440b2bf5a19699a6cb56)
++++ b/pom.xml	(date 1671679628814)
+@@ -2,13 +2,13 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-```
+     <groupId>org.elasticsearch</groupId>
+-    <artifactId>metrics-elasticsearch-reporter</artifactId>
+-    <version>2.3.0-SNAPSHOT</version>
++    <artifactId>metrics-elasticsearch-reporter-patched</artifactId>
++    <version>2.3.0</version>
+
+     <properties>
+         <lucene.version>5.5.0</lucene.version>
+         <elasticsearch.version>2.3.1</elasticsearch.version>
+-        <jackson.version>2.7.3</jackson.version>
++        <jackson.version>2.9.0</jackson.version>
+         <randomized.testrunner.version>2.3.3</randomized.testrunner.version>
+     </properties>
+
+@@ -18,11 +18,11 @@
+<description>Reporter for the metrics library which reports into Elasticsearch</description>
+<inceptionYear>2013</inceptionYear>
+
+-    <scm>
+-        <connection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</connection>
+-        <developerConnection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</developerConnection>
+-        <url>http://github.com/elasticsearch/elasticsearch-metrics-reporter</url>
+-    </scm>
++<!--    <scm>-->
++<!--        <connection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</connection>-->
++<!--        <developerConnection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</developerConnection>-->
++<!--        <url>http://github.com/elasticsearch/elasticsearch-metrics-reporter</url>-->
++<!--    </scm>-->
+
+     <licenses>
+         <license>
+@@ -32,17 +32,6 @@
+</license>
+</licenses>
+
+-    <parent>
+-        <groupId>org.sonatype.oss</groupId>
+-        <artifactId>oss-parent</artifactId>
+-        <version>9</version>
+-    </parent>
+-
+-    <issueManagement>
+-        <system>GitHub</system>
+-        <url>https://github.com/elasticsearch/elasticsearch-metrics-reporter-java/issues/</url>
+-    </issueManagement>
+-
+   <build>
+       <plugins>
+           <plugin>
+@@ -84,7 +73,7 @@
 <dependency>
-  <groupId>org.elasticsearch</groupId>
-  <artifactId>metrics-elasticsearch-reporter</artifactId>
-  <version>2.2.0</version>
-</dependency>
-```
-
-## Configuration
-
-```
-final MetricRegistry registry = new MetricRegistry();
-ElasticsearchReporter reporter = ElasticsearchReporter.forRegistry(registry)
-    .hosts("localhost:9200", "localhost:9201")
-    .build();
-reporter.start(60, TimeUnit.SECONDS);
-```
-
-Define your metrics and registries as usual
-
-```
-private final Meter incomingRequestsMeter = registry.meter("incoming-http-requests");
-
-// in your app code
-incomingRequestsMeter.mark(1);
-```
-
-
-### Options
-
-* `hosts()`: A list of hosts used to connect to, must be in the format `hostname:port`, default is `localhost:9200`
-* `timeout()`: Milliseconds to wait for an established connections, before the next host in the list is tried. Defaults to `1000`
-* `bulkSize()`: Defines how many metrics are sent per bulk requests, defaults to `2500`
-* `filter()`: A `MetricFilter` to define which metrics written to the elasticsearch
-* `percolationFilter()`: A `MetricFilter` to define which metrics should be percolated against. See below for an example
-* `percolationNotifier()`: An implementation of the `Notifier` interface, which is executed upon a matching percolator. See below for an example.
-* `index()`: The name of the index to write to, defaults to `metrics`
-* `indexDateFormat()`: The date format to make sure to rotate to a new index, defaults to `yyyy-MM`
-* `timestampFieldname()`: The field name of the timestamp, defaults to `@timestamp`, which makes it easy to use with kibana
-
-### Mapping
-
-**Note**: The reporter automatically checks for the existence of an index template called `metrics_template`. If this template does not exist, it is created. This template ensures that all strings used in metrics are set to `not_analyzed` and disables the `_all` field.
-
-
-## Notifications with percolations
-
-```
-ElasticsearchReporter reporter = ElasticsearchReporter.forRegistry(registry)
-    .percolationNotifier(new PagerNotifier())
-    .percolationFilter(MetricFilter.ALL)
-    .build();
-reporter.start(60, TimeUnit.SECONDS);
-```
-
-Write a custom notifier
-
-```
-public class PagerNotifier implements Notifier {
-
-  @Override
-  public void notify(JsonMetrics.JsonMetric jsonMetric, String percolateMatcher) {
-    // send pager duty here
-  }
+<groupId>io.dropwizard.metrics</groupId>
+<artifactId>metrics-core</artifactId>
+-            <version>3.1.2</version>
++            <version>4.0.0</version>
+         </dependency>
+         <dependency>
+             <groupId>com.fasterxml.jackson.core</groupId>
+Index: src/main/java/org/elasticsearch/metrics/MetricsElasticsearchModule.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/org/elasticsearch/metrics/MetricsElasticsearchModule.java b/src/main/java/org/elasticsearch/metrics/MetricsElasticsearchModule.java
+--- a/src/main/java/org/elasticsearch/metrics/MetricsElasticsearchModule.java	(revision 4018eaef6fc7721312f7440b2bf5a19699a6cb56)
++++ b/src/main/java/org/elasticsearch/metrics/MetricsElasticsearchModule.java	(date 1671593544483)
+@@ -256,9 +256,9 @@
+if (bulkIndexOperationHeader.index != null) {
+json.writeStringField("_index", bulkIndexOperationHeader.index);
 }
-```
+-            if (bulkIndexOperationHeader.type != null) {
+-                json.writeStringField("_type", bulkIndexOperationHeader.type);
+-            }
++           // if (bulkIndexOperationHeader.type != null) {
++                json.writeStringField("_type", "counter");
++           // }
+             json.writeEndObject();
+             json.writeEndObject();
+         }
+Index: src/main/java/org/elasticsearch/metrics/JsonMetrics.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/org/elasticsearch/metrics/JsonMetrics.java b/src/main/java/org/elasticsearch/metrics/JsonMetrics.java
+--- a/src/main/java/org/elasticsearch/metrics/JsonMetrics.java	(revision 4018eaef6fc7721312f7440b2bf5a19699a6cb56)
++++ b/src/main/java/org/elasticsearch/metrics/JsonMetrics.java	(date 1671593544471)
+@@ -56,7 +56,7 @@
 
-Add a percolation
+         @Override
+         public String toString() {
+-            return String.format("%s %s %s", type(), name, timestamp);
++            return String.format("%s %s %s %s", type(), name, timestamp,value);
+         }
 
-```
-curl http://localhost:9200/metrics/.percolator/http-monitor -X PUT -d '{
-  "query" : { 
-    "bool" : { 
-      "must": [
-        { "term": { "name" : "incoming-http-requests" } },
-        { "range": { "m1_rate": { "to" : "10" } } }
-      ]
-    }
-  }
-}'
-```
-
-## JSON Format of metrics
-
-This is how the serialized metrics looks like in elasticsearch
-
-### Counter
-
-```
-{
-  "name": "usa-gov-heartbearts",
-  "@timestamp": "2013-07-20T09:29:58.000+0000",
-  "count": 18
-}
-```
-
-### Timer
-
-```
-{
-  "name" : "bulk-request-timer",
-  "@timestamp" : "2013-07-20T09:43:58.000+0000",
-  "count" : 114,
-  "max" : 109.681,
-  "mean" : 5.439666666666667,
-  "min" : 2.457,
-  "p50" : 4.3389999999999995,
-  "p75" : 5.0169999999999995,
-  "p95" : 8.37175,
-  "p98" : 9.6832,
-  "p99" : 94.68429999999942,
-  "p999" : 109.681,
-  "stddev" : 9.956913151098842,
-  "m15_rate" : 0.10779994503690074,
-  "m1_rate" : 0.07283351433589833,
-  "m5_rate" : 0.10101298115113727,
-  "mean_rate" : 0.08251056571678642,
-  "duration_units" : "milliseconds",
-  "rate_units" : "calls/second"
-}
-```
-
-### Meter
-
-```
-{
-  "name" : "usagov-incoming-requests",
-  "@timestamp" : "2013-07-20T09:29:58.000+0000",
-  "count" : 224,
-  "m1_rate" : 0.3236309568191993,
-  "m5_rate" : 0.45207208204948995,
-  "m15_rate" : 0.5014348927301423,
-  "mean_rate" : 0.4135529888278531,
-  "units" : "events/second"
-}
-```
-
-### Histogram
-
-```
-{
-  "name" : "my-histgram",
-  "@timestamp" : "2013-07-20T09:29:58.000+0000",
-  "count" : 114,
-  "max" : 109.681,
-  "mean" : 5.439666666666667,
-  "min" : 2.457,
-  "p50" : 4.3389999999999995,
-  "p75" : 5.0169999999999995,
-  "p95" : 8.37175,
-  "p98" : 9.6832,
-  "p99" : 94.68429999999942,
-  "p999" : 109.681,
-  "stddev" : 9.956913151098842,}
-}
-```
-
-### Gauge
-
-```
-{
-  "name" : "usagov-incoming-requests",
-  "@timestamp" : "2013-07-20T09:29:58.000+0000",
-  "value" : 123
-}
-```
-
-
-## Next steps
-
-* Integration with Kibana would be awesome
+         public abstract String type();
 

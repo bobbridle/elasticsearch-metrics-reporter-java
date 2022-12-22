@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     
     <groupId>org.elasticsearch</groupId>
-    <artifactId>metrics-elasticsearch-reporter</artifactId>
-    <version>2.3.0-SNAPSHOT</version>
+    <artifactId>metrics-elasticsearch-reporter-patched</artifactId>
+    <version>2.3.0</version>
 
     <properties>
         <lucene.version>5.5.0</lucene.version>
         <elasticsearch.version>2.3.1</elasticsearch.version>
-        <jackson.version>2.7.3</jackson.version>
+        <jackson.version>2.9.0</jackson.version>
         <randomized.testrunner.version>2.3.3</randomized.testrunner.version>
     </properties>
 
@@ -18,11 +18,11 @@
     <description>Reporter for the metrics library which reports into Elasticsearch</description>
     <inceptionYear>2013</inceptionYear>
 
-    <scm>
-        <connection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</connection>
-        <developerConnection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</developerConnection>
-        <url>http://github.com/elasticsearch/elasticsearch-metrics-reporter</url>
-    </scm>
+<!--    <scm>-->
+<!--        <connection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</connection>-->
+<!--        <developerConnection>scm:git:git@github.com:elasticsearch/elasticsearch-metrics-reporter-java.git</developerConnection>-->
+<!--        <url>http://github.com/elasticsearch/elasticsearch-metrics-reporter</url>-->
+<!--    </scm>-->
 
     <licenses>
         <license>
@@ -31,17 +31,6 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>9</version>
-    </parent>
-
-    <issueManagement>
-        <system>GitHub</system>
-        <url>https://github.com/elasticsearch/elasticsearch-metrics-reporter-java/issues/</url>
-    </issueManagement>
 
     <build>
         <plugins>
@@ -84,7 +73,7 @@
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
-            <version>3.1.2</version>
+            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

@@ -56,7 +56,7 @@ public class JsonMetrics {
 
         @Override
         public String toString() {
-            return String.format("%s %s %s", type(), name, timestamp);
+            return String.format("%s %s %s %s", type(), name, timestamp,value);
         }
 
         public abstract String type();

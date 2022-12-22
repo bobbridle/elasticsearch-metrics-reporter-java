@@ -256,9 +256,9 @@ public class MetricsElasticsearchModule extends Module {
             if (bulkIndexOperationHeader.index != null) {
                 json.writeStringField("_index", bulkIndexOperationHeader.index);
             }
-            if (bulkIndexOperationHeader.type != null) {
-                json.writeStringField("_type", bulkIndexOperationHeader.type);
-            }
+           // if (bulkIndexOperationHeader.type != null) {
+                json.writeStringField("_type", "counter");
+           // }
             json.writeEndObject();
             json.writeEndObject();
         }
